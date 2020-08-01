@@ -6,8 +6,9 @@ Need to:
 - edit lesson.txt in format ```term,subject,day,24 hr time,teacher```
 - create a webhook to send slack messages 
   
-Command to run:
-``` pip install --upgrade google-api-python-client```
+Commands to run:
+
+``` pip install --upgrade google-api-python-client \n pip install google_auth_oauthlib```
 
 Python modules used 
 - google_auth_oauthlib
