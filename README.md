@@ -8,7 +8,8 @@ Need to:
   
 Commands to run:
 
-``` pip install --upgrade google-api-python-client \n pip install google_auth_oauthlib```
+`pip install --upgrade google-api-python-client`  
+`pip install google_auth_oauthlib`
 
 Python modules used 
 - google_auth_oauthlib
