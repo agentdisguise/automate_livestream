@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 import json
+import sys
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -12,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 import google.auth.transport.requests
 
 # Bc GMT sucks 
-AEST_MODIFIER = -10
+AEST_MODIFIER = -11
 
 # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
 # the OAuth 2.0 information for this application, including its client_id and
@@ -58,6 +59,7 @@ def get_authenticated_service():
 
         # Save the credentials to a json file so we can use it again later
         save_credentials(credentials)
+        message = "New authentication obtained and saved"
     else:
         # We have some credentials saved so load it
         credentials = google.oauth2.credentials.Credentials(
@@ -73,6 +75,7 @@ def get_authenticated_service():
         expiry_datetime = datetime.datetime.strptime(expiry,'%Y-%m-%d %H:%M:%S')
         credentials.expiry = expiry_datetime
 
+        message = "Old authentication reused"
         # Refresh the token if it's expired 
         if expiry_datetime < datetime.datetime.now():
             request = google.auth.transport.requests.Request()
@@ -80,8 +83,9 @@ def get_authenticated_service():
                 new_creds = credentials.refresh(request)
                 # Update the refresh token and time 
                 save_credentials(credentials)
+                message = "Old authentication renewed"
 
-
+    write_log(message)
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 def save_credentials(credentials):
@@ -122,12 +126,13 @@ def insert_broadcast(youtube, options):
     ).execute()
 
     snippet = insert_broadcast_response["snippet"]
-
-    print ("Broadcast '%s' with title '%s' was published at '%s'." % (
-           insert_broadcast_response["id"], snippet["title"], snippet["publishedAt"]))
+    message = "Broadcast '%s' with title '%s' was published at '%s'." % (
+           insert_broadcast_response["id"], snippet["title"], snippet["publishedAt"])
+    print (message)
+    write_log(message)
     return insert_broadcast_response["id"]
 
-def update_broadcast(broadcast_id, youtube, options):   
+def update_broadcast(broadcast_id, youtube, options):  
     update_broadcast_response = youtube.videos().update(
         part='id,snippet,status',
         body=dict(
@@ -135,7 +140,7 @@ def update_broadcast(broadcast_id, youtube, options):
             snippet=dict(
                 title=str(options),
                 categoryId="27",
-                description="hello"
+                description="Book your online homework help:\n https://zhangshsccoaching.setmore.com/ \n \n Scan and email your homework to: \n marking@zhangshsccoaching.com.au \n \n Homework Submission Guide: \n - Your Homework is DUE before your next lesson \n https://youtu.be/riOnuBtOs9o"
             ),
             status=dict(
                 selfDeclaredMadeForKids=False
@@ -143,7 +148,9 @@ def update_broadcast(broadcast_id, youtube, options):
         )
     ).execute()
 
-    print("Broadcast was updated.")
+    message = "Broadcast was updated."
+    write_log(message)
+    print(message)
 
 # Create a liveStream resource and set its title, format, and ingestion type.
 # This resource describes the content that you are transmitting to YouTube.
@@ -156,8 +163,9 @@ def insert_stream(youtube, options):
                 description="Education"
             ),
             cdn=dict(
-                format="variable",
-                ingestionType="rtmp"
+                ingestionType="rtmp",
+                resolution="variable",
+                frameRate="variable"
             )
         )
     ).execute()
@@ -165,8 +173,10 @@ def insert_stream(youtube, options):
     snippet = insert_stream_response["snippet"]
     cdn = insert_stream_response["cdn"]
 
-    print ("Stream '%s' with title '%s' was inserted." % (
-           insert_stream_response["id"], snippet["title"]))
+    message = "Stream '%s' with title '%s' was inserted." % (
+           insert_stream_response["id"], snippet["title"])
+    write_log(message)
+    print (message)
     return (insert_stream_response["id"], cdn["ingestionInfo"]["streamName"])
 
 # Bind the broadcast to the video stream. By doing so, you link the video that
@@ -178,6 +188,13 @@ def bind_broadcast(youtube, broadcast_id, stream_id):
         streamId=stream_id
     ).execute()
 
-    print ("Broadcast '%s' was bound to stream '%s'." % (
+    message = "Broadcast '%s' was bound to stream '%s'." % (
            bind_broadcast_response["id"],
-           bind_broadcast_response["contentDetails"]["boundStreamId"]))
+           bind_broadcast_response["contentDetails"]["boundStreamId"])
+    write_log(message)
+    print (message)
+
+def write_log(message):
+
+    with open("log.txt", "a") as f:
+        f.write(f"[{datetime.datetime.now()}] {message} \n")
