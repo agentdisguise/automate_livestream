@@ -7,7 +7,8 @@ import httplib2
 from googleapiclient.errors import HttpError
 
 # Global variables yay
-term_start = datetime.datetime.strptime("2020-7-20", "%Y-%m-%d").date()
+term_start_date =  "2020-10-11"
+term = 4
 
 days = {
     0 : "Monday",
@@ -32,7 +33,7 @@ class Lesson():
     def classtime(self):
         return self._classtime
 
-    def slack_string(self):
+    def message_string(self):
         print_time = self._classtime.strftime("%I:%M%p")
         return f'{self._subject} {print_time} {self._teacher}'
 
@@ -43,11 +44,10 @@ class Lesson():
         return output
 
 # Send message to slack
-def slack_message(lesson, stream_key, broadcast_id):
+def send_message(lesson, stream_key, broadcast_id):
+    string = lesson.message_string() + "\n" + stream_key + "\n \n" + "youtube.com/watch?v=" + broadcast_id
 
-    string = lesson.slack_string() + "\n" + stream_key + "\n" + "youtube.com/watch?v=" + broadcast_id
-
-    url = 'slack webhook url'
+    url = 'insert url here'
     bot_message = {
         'text' : string
     }
@@ -55,7 +55,6 @@ def slack_message(lesson, stream_key, broadcast_id):
     message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
 
     http_obj = httplib2.Http()
-
     response = http_obj.request(
         uri=url,
         method='POST',
@@ -65,19 +64,24 @@ def slack_message(lesson, stream_key, broadcast_id):
 
     print("Message sent\n")
 
+
 # Youtube authentication yay
-youtube_auth = youtube.get_authenticated_service()
+#youtube_auth = youtube.get_authenticated_service()
 
 # Grab the date and figure out what day and week it is
 to_day = datetime.date.today()
 week_day = days.get(to_day.weekday())
+term_start = datetime.datetime.strptime(term_start_date, "%Y-%m-%d").date()
 week_num = math.ceil((to_day - term_start).days / 7) 
 
+# Format the file name based on the year and term
+filename = str(term_start.year) + "t" + str(term) + ".txt"
+
 # Search through lesson.txt for lessons that are on and save the information to a class
-with open("lesson.txt", "r") as f:
+with open(filename, "r") as f:
     for line in f:
         if week_day in line: 
-            term, subject, day, classtime, teacher = line.split(',')
+            subject, day, classtime, teacher = line.split(',')
 
             # Converting the class time to a datetime object 
             hour, minute = map(int , classtime.split(':'))
@@ -92,8 +96,9 @@ with open("lesson.txt", "r") as f:
                 broadcast_id = youtube.insert_broadcast(youtube_auth, lesson)
                 youtube.update_broadcast(broadcast_id, youtube_auth, lesson)
                 (stream_id, stream_key) = youtube.insert_stream(youtube_auth, lesson)
+                print(stream_id, stream_key)
                 youtube.bind_broadcast(youtube_auth, broadcast_id, stream_id)
             except HttpError as e:
                 print (f"An HTTP error {e.resp.status} occurred:\n {e.content}")
             
-            slack_message(lesson, stream_key, broadcast_id)
+            send_message(lesson, stream_key, broadcast_id)
